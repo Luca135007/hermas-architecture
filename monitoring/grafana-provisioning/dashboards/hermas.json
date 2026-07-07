@@ -1,0 +1,90 @@
+{
+  "uid": "hermas-main",
+  "title": "Hermas — GPU Arbitration & Pipeline Health",
+  "tags": ["hermas"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "GPU VRAM (ADR-0001 arbitration invariant)",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "min": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "total" },
+            "properties": [
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineStyle", "value": { "dash": [4, 4], "fill": "dash" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "expr": "hermas_gpu_vram_used_bytes", "legendFormat": "used" },
+        { "refId": "B", "expr": "hermas_gpu_vram_total_bytes", "legendFormat": "total" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Resident Ollama models (keep-alive policy, ADR-0002)",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "fillOpacity": 30, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "hermas_ollama_model_vram_bytes > 0", "legendFormat": "{{model}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Image generation duration p50 / p95",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(hermas_image_duration_seconds_bucket[30m])) by (le))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(hermas_image_duration_seconds_bucket[30m])) by (le))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Prompt-expansion tier served (ADR-0003 — lower tiers = tier 1 unhealthy)",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "min": 0, "custom": { "fillOpacity": 30, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "increase(hermas_expansion_tier_total[1h])", "legendFormat": "{{tier}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "VRAM evictions by direction",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "fieldConfig": { "defaults": { "min": 0 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "increase(hermas_vram_eviction_total[1h])", "legendFormat": "{{direction}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "User-visible command errors",
+      "datasource": { "type": "prometheus", "uid": "hermas-prom" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "fieldConfig": { "defaults": { "min": 0 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "increase(hermas_command_errors_total[1h])", "legendFormat": "{{command}}" }
+      ]
+    }
+  ]
+}

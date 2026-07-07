@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: hermas
+    folder: Hermas
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: D:/ai/monitoring/grafana-provisioning/dashboards
