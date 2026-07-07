@@ -1,3 +1,5 @@
+[繁體中文](README.zh-TW.md) | **English**
+
 # Hermas — Multi-Model AI Orchestration on a Single 16 GB GPU
 
 **An architecture case study**: how a Discord bot serves image generation, conversational AI,

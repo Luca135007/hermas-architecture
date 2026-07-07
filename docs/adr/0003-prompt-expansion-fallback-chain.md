@@ -17,9 +17,8 @@ quality, never block image generation.
 
 ## Decision
 
-Try expanders in **descending quality order**, falling through on any exception or timeout
-(the local tier additionally falls through on empty output); each tier is independent of the
-previous one's infrastructure:
+Try expanders in **descending quality order**, falling through on any exception, timeout, or
+empty response; each tier is independent of the previous one's infrastructure:
 
 | Tier | Model | Where | Guard |
 |---|---|---|---|
