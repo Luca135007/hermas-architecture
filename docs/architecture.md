@@ -16,6 +16,7 @@ graph TB
     end
     discord["Discord API"]
     openrouter["OpenRouter<br/>(free cloud models)"]
+    anthropic["Claude API<br/>(tarot reading, optional)"]
 
     user -->|commands & replies| discord
     discord <-->|gateway websocket| hermas
@@ -23,11 +24,13 @@ graph TB
     hermas -->|native API| ollama
     hermas -->|OpenAI-compatible API| lms
     hermas -->|HTTPS, optional| openrouter
+    hermas -->|HTTPS, optional| anthropic
 ```
 
-Everything latency-critical runs on one host. OpenRouter is the only cloud dependency and is
-used exclusively as a fallback tier — the system has no cloud LLM dependency; every feature
-works with local inference only.
+Everything latency-critical runs on one host. OpenRouter and the Claude API are the only cloud
+dependencies, and both are optional: OpenRouter is a fallback tier for prompt expansion, and the
+Claude API is used for tarot-reading interpretation only when `ANTHROPIC_API_KEY` is configured
+— every feature still works with local inference only.
 
 ## Level 2 — Containers
 
@@ -39,11 +42,13 @@ graph TB
         expand["Prompt expansion<br/>5-tier fallback chain"]
         memory["Memory layer<br/>per-channel RAM history + MemPalace recall"]
         rpg["RPG engine (rpg_lib)<br/>state machine + GM prompting"]
+        tarot["Tarot engine (tarot_lib)<br/>deck/spread draw + Claude reading"]
     end
     comfy["ComfyUI :8188"]
     ollama["Ollama :11434"]
     lms["LM Studio :1234"]
     openrouter["OpenRouter<br/>(fallback tiers 2-4)"]
+    anthropic["Claude API<br/>(optional, tarot only)"]
     chroma[("MemPalace<br/>ChromaDB")]
     sqlite[("SQLite<br/>saves: one row per channel")]
 
@@ -51,6 +56,7 @@ graph TB
     cmds --> expand
     cmds --> memory
     cmds --> rpg
+    cmds --> tarot
     arb -->|"/free"| comfy
     arb -->|"/api/ps → keep_alive:0"| ollama
     expand --> ollama
@@ -59,8 +65,19 @@ graph TB
     memory --> chroma
     rpg --> sqlite
     rpg --> ollama
+    tarot -->|"HTTPS, optional"| anthropic
     cmds -->|"POST /prompt · WS events · GET /history"| comfy
 ```
+
+The tarot engine draws no VRAM: card selection is local (in-process deck state), and reading
+interpretation calls the Claude API directly rather than Ollama or ComfyUI, so it sits outside
+the VRAM arbitration path described below entirely. Card artwork is a static asset pipeline
+(offline ComfyUI/ControlNet batch restyling of the 78 public-domain Rider–Waite–Smith cards into
+an Alphonse Mucha style, Pillow post-processing to overlay correct numeral/name plates, variant
+selection recorded in `data/mucha_picks.json`), not a runtime dependency — at request time
+`tarot_lib.card_image_path()` prefers the restyled artwork and falls back to the original
+Rider–Waite–Smith image if it is missing; reversed cards are rendered with a `Pillow.rotate(180)`
+in memory (via `BytesIO`), never written back to disk.
 
 Blocking I/O (HTTP, WebSocket, LLM calls) is pushed off the event loop with
 `asyncio.to_thread`, so an image render (~20 s, up to a minute worst-case with eviction and

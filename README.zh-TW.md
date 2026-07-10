@@ -50,6 +50,7 @@ Discord 使用者 ──> bot.py（asyncio、discord.py）
                     ├─ ComfyUI（HTTP＋WebSocket）     ── 圖像生成／改圖
                     ├─ Ollama（原生 API）             ── 聊天／擴寫／RPG 敘事
                     ├─ OpenRouter＋LM Studio          ── 擴寫降級層
+                    ├─ Claude API（tarot_lib）        ── 塔羅解讀，無金鑰時退化為本地規則式
                     ├─ MemPalace（ChromaDB）          ── 長期對話記憶
                     └─ SQLite                         ── RPG 遊戲狀態，每頻道一列
 ```
@@ -58,7 +59,9 @@ Discord 使用者 ──> bot.py（asyncio、discord.py）
 
 文生圖與圖生圖（含 LLM 提示詞強化）、多輪聊天（短期記憶存於行程內、長期記憶存於向量庫）、
 LLM 擔任 GM 的持久化文字 RPG（SQLite 存檔）、語言學習測驗與每日單字推播、
-角色扮演對話練習與講評。
+角色扮演對話練習與講評，以及塔羅占卜功能（單張指引／三張牌陣），其解讀優先呼叫 Claude API、
+無 API 金鑰時自動退化為本地規則式解讀——這是一個不佔用 VRAM 的雲端工作負載，因此完全不參與
+ComfyUI／Ollama 的資源仲裁。
 
 ## 維運
 

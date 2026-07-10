@@ -54,6 +54,7 @@ Discord user ──> bot.py (asyncio, discord.py)
                    ├─ ComfyUI  (HTTP + WebSocket)   ── image generation / img2img
                    ├─ Ollama   (native API)         ── chat / expansion / RPG narration
                    ├─ OpenRouter + LM Studio        ── expansion fallback tiers
+                   ├─ Claude API (tarot_lib)        ── tarot reading, local rule-based fallback
                    ├─ MemPalace (ChromaDB)          ── long-term conversational memory
                    └─ SQLite                        ── RPG game state, one row per channel
 ```
@@ -63,7 +64,10 @@ Discord user ──> bot.py (asyncio, discord.py)
 Text-to-image and image-to-image generation with LLM prompt enhancement, multi-turn chat with
 both short-term (per-channel, in-RAM) and long-term (vector-store) memory, a persistent
 text-RPG with an LLM game master and SQLite saves, language-learning quizzes with scheduled
-daily vocabulary pushes, and roleplay conversation practice with feedback.
+daily vocabulary pushes, roleplay conversation practice with feedback, and a tarot-reading
+feature (single-card and three-card spreads) whose interpretation runs on the Claude API when
+available and degrades to a local rule-based reading otherwise — a cloud workload that draws no
+VRAM and therefore sits outside the ComfyUI/Ollama arbitration entirely.
 
 ## Operations
 

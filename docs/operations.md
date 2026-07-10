@@ -17,6 +17,7 @@
 | ComfyUI down | image commands only | submit/monitor/fetch each wrapped; user gets an actionable error, chat unaffected |
 | Ollama down | chat, RPG, expansion tier 1 | chat/RPG report the failure; expansion falls through to cloud tiers (ADR-0003) |
 | OpenRouter unavailable / no key | none visible | tiers skipped; chain continues to local fallback |
+| Claude API unavailable / no key (tarot) | tarot reading quality only | falls back to a local rule-based reading; card draw and image lookup are unaffected |
 | LLM omits required JSON (RPG) | one game turn | targeted re-ask for the missing JSON block; if it still fails, the narration is delivered and that turn's state changes are dropped |
 | Transient Ollama connection error (RPG) | one call | single automatic retry before surfacing |
 | Concurrent GPU commands | latency, possible thrash | accepted at current scale — see Known Limitations |
