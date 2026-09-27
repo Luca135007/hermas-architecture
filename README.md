@@ -41,6 +41,9 @@ considered and the trade-offs that were accepted:
 - [ADR-0004 — Disabling model "thinking" for pipeline calls](docs/adr/0004-disable-model-thinking.md):
   reasoning-mode output silently consumed the token budget and truncated replies; turning it
   off at the API level was a reliability fix, not a performance tweak.
+- [ADR-0005 — Placeholder IDs in few-shot prompts](docs/adr/0005-placeholder-ids-in-few-shot-prompts.md):
+  the example chapter title was copied verbatim and the example's named character kept resurfacing;
+  small local models treat concrete example content as reusable, not just illustrative.
 
 ## Architecture
 
@@ -63,8 +66,11 @@ Discord user ──> bot.py (asyncio, discord.py)
 
 Text-to-image and image-to-image generation with LLM prompt enhancement, multi-turn chat with
 both short-term (per-channel, in-RAM) and long-term (vector-store) memory, a persistent
-text-RPG with an LLM game master and SQLite saves, language-learning quizzes with scheduled
-daily vocabulary pushes, roleplay conversation practice with feedback, and a tarot-reading
+text-RPG with an LLM game master and SQLite saves — including a second, independently-gated
+adult-content variant restricted to age-restricted Discord channels, whose content safety
+(age whitelisting, intimacy gating, image-prompt filtering) is enforced in code rather than by
+prompt instruction — language-learning quizzes with scheduled daily vocabulary pushes,
+roleplay conversation practice with feedback, and a tarot-reading
 feature (single-card and three-card spreads) whose interpretation runs on the Claude API when
 available and degrades to a local rule-based reading otherwise — a cloud workload that draws no
 VRAM and therefore sits outside the ComfyUI/Ollama arbitration entirely.
