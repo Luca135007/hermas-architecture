@@ -1,6 +1,6 @@
 # ADR-0003 — Five-Tier Prompt-Expansion Fallback Chain
 
-**Status**: Accepted (2026-07) · **Supersedes**: single local specialist model (V6)
+**Status**: Accepted (2026-07) · partially superseded by ADR-0006 (2026-10-02) — tier 1 is now qwen3.5:9b · **Supersedes**: single local specialist model (V6)
 
 ## Context
 
@@ -11,6 +11,9 @@ as the only expander. Its quality was poor — a general 14B model with a good s
 beat it clearly — but the 14B model introduces new failure modes: it needs 9.3 GB of VRAM on
 a card the image model also wants, takes 15–50 s to load, and can time out or return empty
 output.
+
+> **Update (2026-10)**: since the NVFP4 image weights (2026-08) VRAM pressure from the 14B model was
+> lower than described here; tier 1 is now `qwen3.5:9b` (ADR-0006).
 
 Expansion is an *enhancement*, not a requirement: a failed expansion should degrade image
 quality, never block image generation.

@@ -130,11 +130,11 @@ sequenceDiagram
     Note over U,C: "!生圖" — image generation (LLM yields to image)
     U->>B: !生圖 prompt
     B->>C: POST /free
-    Note right of C: image model evicted so the 14B expander fits
-    B->>O: expand prompt (qwen3:14b, keep_alive:0)
-    Note right of O: expander unloads itself after the call
+    Note right of C: image model evicted before the local LLM call
+    B->>O: expand prompt (qwen3.5:9b, keep_alive:30m, num_ctx:16384)
+    Note right of O: same resident model as chat, no reload
     B->>O: /api/ps → keep_alive:0 for any resident model
-    Note right of O: chat model evicted (free_ollama_vram)
+    Note right of O: qwen3.5:9b evicted (free_ollama_vram)
     B->>C: POST /prompt (queue workflow)
     C-->>B: WS: executing → done
     B->>C: GET /history/{id}
@@ -155,10 +155,14 @@ Key properties:
   `/free` endpoint; `free_ollama_vram()` lists loaded models via `/api/ps` and unloads each
   with a zero `keep_alive`. Every GPU-bound entry point calls the appropriate one first.
 - **Residency is policy, not accident.** The chat and RPG models are pinned for 30 minutes
-  (consecutive turns pay no reload); the expansion model uses `keep_alive: 0` because an
-  image render — which needs the whole card — always follows it (see ADR-0002).
-- **Coordination is convention, not mutex.** There is deliberately no lock or queue around
-  the GPU; the trade-off and its scale boundary are documented in ADR-0001 and in
+  (consecutive turns pay no reload). Since 2026-10-02 chat, both RPG engines and prompt
+  expansion share one model, `qwen3.5:9b`, called with the same `keep_alive: "30m"` and
+  `num_ctx: 16384` so that no call unloads it or reloads it at a different context size
+  (see ADR-0006). Because `VRAM_YIELD_ENABLED` is still on in production, an image render
+  still unloads it first (see ADR-0001).
+- **One GPU job at a time inside the bot.** GPU-bound entry points run under a process-wide
+  lock (`gpu_lock`, a `threading.RLock`, applied by the `gpu_task` decorator), on top of the
+  eviction conventions of ADR-0001. External GPU clients do not share this lock; see
   [operations.md](operations.md#known-limitations).
 
 ## Data & State

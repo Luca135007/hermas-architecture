@@ -1,6 +1,6 @@
 # ADR-0001 — Bidirectional VRAM Yielding Between Image Generation and LLMs
 
-**Status**: Accepted (2026-07) · **Supersedes**: one-directional yielding (image → LLM only)
+**Status**: Accepted (2026-07) · partially superseded by ADR-0006 (2026-10-02) — the 14B expander no longer exists · **Supersedes**: one-directional yielding (image → LLM only)
 
 ## Context
 
@@ -26,6 +26,13 @@ Every GPU-bound entry point **evicts the other side before it runs**:
 
 Arbitration is caller-driven and convention-based: there is **no lock, queue, or resource
 manager**. Each handler is responsible for clearing its own runway.
+
+> **Update (2026-10)**: the Context above describes the bf16 weights of 2026-07. Since 2026-08
+> the NVFP4 weights need about 7.2 GB and an LLM can stay resident beside them; yielding stays on
+> because a render with the card shared measured 15.5 s against 8.8 s exclusive. A process-wide
+> GPU lock (`gpu_lock`, applied by the `gpu_task` decorator) was added later, so the "no lock"
+> statement in the Decision no longer holds inside the bot. The 14B expander was removed in
+> ADR-0006.
 
 ## Alternatives Considered
 

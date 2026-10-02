@@ -14,15 +14,16 @@ workloads coexist on hardware that a naive design would declare insufficient.
 
 | Workload | Backend | VRAM | Residency |
 |---|---|---|---|
-| Image generation (Z-Image Turbo) | ComfyUI | ~14 GB, **15.7 GB peak** | on demand |
-| Chat LLM (qwen3.5:9b, 16k ctx) | Ollama | ~5.9 GB | resident, 30 min |
-| Prompt-expansion LLM (qwen3:14b Q4) | Ollama | ~9.3 GB | load–use–unload |
-| RPG game-master LLM (qwen3:14b) | Ollama | ~9.3 GB | resident, 30 min |
+| Image generation (Z-Image Turbo, NVFP4 weights since 2026-08) | ComfyUI | ~7.2 GB | on demand |
+| Local LLM (qwen3.5:9b, 16k ctx) — chat, both RPG engines, prompt expansion | Ollama | 5.8 GB (measured 2026-10-02) | resident, 30 min |
 
-Image generation peaks at 15.7 GB — within 2% of the card's capacity. **No LLM can stay
-loaded while an image renders.** Yet users expect snappy chat (no 30-second model reload per
-message) and image prompts enhanced by a 14B model. These requirements are in direct tension,
-and resolving that tension is the core of this design.
+With the original bf16 weights, image generation peaked at 15.7 GB — within 2% of the card's
+capacity — so no LLM could stay loaded while an image rendered. Since 2026-08 the NVFP4 weights
+need about 7.2 GB and the chat model can stay resident beside them, but a render with the card
+shared measured 15.5 s against 8.8 s with the card to itself, so production keeps yielding on
+(ADR-0001). Users expect snappy chat (no 30-second model reload per message), LLM-enhanced image
+prompts and fast renders; balancing those is the core of this design. Since 2026-10-02 a single Ollama model
+serves every local LLM workload (ADR-0006); cloud fallbacks are unchanged.
 
 ## Key Design Decisions
 
@@ -33,10 +34,11 @@ considered and the trade-offs that were accepted:
   every GPU consumer evicts the other side before it runs, instead of static partitioning,
   CPU offload, or buying a second GPU.
 - [ADR-0002 — Differentiated keep-alive policy](docs/adr/0002-differentiated-keep-alive.md):
-  the chat model stays resident for 30 minutes; the prompt expander unloads immediately after
-  every use. Same runtime, opposite policies, driven by what each workload is followed by.
+  the chat model stays resident for 30 minutes; the prompt expander originally unloaded
+  immediately after every use (superseded in part by ADR-0006, which gives it the chat
+  model's policy).
 - [ADR-0003 — Five-tier prompt-expansion fallback chain](docs/adr/0003-prompt-expansion-fallback-chain.md):
-  local 14B model first, three free cloud models next, a small local specialist model last —
+  local model first, three free cloud models next, a small local specialist model last —
   quality-ordered degradation instead of a single point of failure.
 - [ADR-0004 — Disabling model "thinking" for pipeline calls](docs/adr/0004-disable-model-thinking.md):
   reasoning-mode output silently consumed the token budget and truncated replies; turning it
@@ -44,6 +46,9 @@ considered and the trade-offs that were accepted:
 - [ADR-0005 — Placeholder IDs in few-shot prompts](docs/adr/0005-placeholder-ids-in-few-shot-prompts.md):
   the example chapter title was copied verbatim and the example's named character kept resurfacing;
   small local models treat concrete example content as reusable, not just illustrative.
+- [ADR-0006 — One resident Ollama model for every local LLM workload](docs/adr/0006-single-resident-local-llm.md):
+  chat, both RPG engines and prompt expansion all use `qwen3.5:9b` with identical
+  `keep_alive` and `num_ctx`; the 14B model was removed.
 
 ## Architecture
 
@@ -87,7 +92,7 @@ metric back to the ADR whose invariant it makes observable.
 
 ## Stack
 
-Python 3.11 · discord.py 2.7 · ComfyUI (Z-Image Turbo) · Ollama (qwen3 family) ·
+Python 3.11 · discord.py 2.7 · ComfyUI (Z-Image Turbo) · Ollama (qwen3.5:9b) ·
 MemPalace/ChromaDB · SQLite · Windows 11, RTX 5070 Ti 16 GB
 
 ---

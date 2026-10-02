@@ -1,6 +1,6 @@
 # ADR-0002 — Differentiated keep-alive Policy per LLM Workload
 
-**Status**: Accepted (2026-07)
+**Status**: Accepted (2026-07) · partially superseded by ADR-0006 (2026-10-02) — prompt expansion now uses `keep_alive: "30m"`
 
 ## Context
 

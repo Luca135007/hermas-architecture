@@ -13,14 +13,13 @@
 
 | 工作負載 | 後端 | VRAM | 駐留策略 |
 |---|---|---|---|
-| 圖像生成（Z-Image Turbo） | ComfyUI | 約 14 GB，**峰值 15.7 GB** | 隨需載入 |
-| 聊天 LLM（qwen3.5:9b，16k context） | Ollama | 約 5.9 GB | 常駐 30 分鐘 |
-| 提示詞擴寫 LLM（qwen3:14b Q4） | Ollama | 約 9.3 GB | 載入—使用—卸載 |
-| RPG 敘事 LLM（qwen3:14b） | Ollama | 約 9.3 GB | 常駐 30 分鐘 |
+| 圖像生成（Z-Image Turbo，2026-08 起 NVFP4 權重） | ComfyUI | 約 7.2 GB | 隨需載入 |
+| 本機 LLM（qwen3.5:9b，16k context）——聊天、兩套 RPG、提示詞擴寫 | Ollama | 5.8 GB（2026-10-02 實測） | 常駐 30 分鐘 |
 
-圖像生成峰值 15.7 GB——距離整張卡的容量不到 2%。**渲染時任何 LLM 都不能留在卡上。**
-但使用者期待聊天即時回應（不能每則訊息重載模型 30 秒），也期待用 14B 模型強化圖像提示詞。
-這些需求彼此直接衝突，而化解這個衝突正是本設計的核心。
+原本的 bf16 權重讓圖像生成峰值達 15.7 GB——距離整張卡的容量不到 2%，渲染時任何 LLM 都不能留在卡上。
+2026-08 起改用 NVFP4 權重，只需約 7.2 GB，聊天模型可以同時常駐；但共用顯示卡時實測渲染 15.5 秒，
+獨占時 8.8 秒，因此正式環境仍開啟禮讓（ADR-0001）。使用者期待聊天即時回應（不能每則訊息重載模型 30 秒）、
+以 LLM 強化圖像提示詞，也期待渲染夠快；在這些需求間取得平衡正是本設計的核心。自 2026-10-02 起，所有本機 LLM 工作負載統一使用同一個 Ollama 模型（ADR-0006）；雲端備援不變。
 
 ## 關鍵設計決策
 
@@ -29,10 +28,10 @@
 - [ADR-0001 — 雙向 VRAM 禮讓](docs/adr/0001-bidirectional-vram-yielding.md)：
   每個 GPU 使用者在執行前先驅逐對方，而不是靜態切分、CPU offload 或加購第二張卡。
 - [ADR-0002 — 差異化 keep-alive 策略](docs/adr/0002-differentiated-keep-alive.md)：
-  聊天模型常駐 30 分鐘；擴寫模型每次用完立即卸載。同一個 runtime、相反的策略，
-  由「這個工作負載之後接著什麼」決定。
+  聊天模型常駐 30 分鐘；擴寫模型原本每次用完立即卸載（已被 ADR-0006 部分取代，
+  擴寫改採與聊天相同的策略）。
 - [ADR-0003 — 五層提示詞擴寫降級鏈](docs/adr/0003-prompt-expansion-fallback-chain.md)：
-  本地 14B 模型優先，三個免費雲端模型居次，小型本地特化模型墊底——
+  本地模型優先，三個免費雲端模型居次，小型本地特化模型墊底——
   按品質排序的優雅降級，而非單點故障。
 - [ADR-0004 — 管線呼叫一律關閉模型「思考」模式](docs/adr/0004-disable-model-thinking.md)：
   推理模式的輸出默默吃掉 token 額度、截斷回覆；在 API 層關閉它是可靠性修復，
@@ -40,6 +39,8 @@
 - [ADR-0005 — 少樣本提示詞一律用佔位符](docs/adr/0005-placeholder-ids-in-few-shot-prompts.md)：
   範例回目被一字不差照抄，範例裡寫死的角色也一再被拉回劇情；小型本地模型會把範例的具體內容當成
   可複製的內容，不只是格式示範。
+- [ADR-0006 — 所有本機 LLM 工作負載共用單一常駐 Ollama 模型](docs/adr/0006-single-resident-local-llm.md)：
+  聊天、兩套 RPG 與提示詞擴寫全部使用 `qwen3.5:9b`，`keep_alive` 與 `num_ctx` 一致；已移除 14B 模型。
 
 ## 架構
 
@@ -78,7 +79,7 @@ Runbook、故障模式、Prometheus／Grafana 監控設計，以及誠實列出�
 
 ## 技術棧
 
-Python 3.11 · discord.py 2.7 · ComfyUI（Z-Image Turbo）· Ollama（qwen3 系列）·
+Python 3.11 · discord.py 2.7 · ComfyUI（Z-Image Turbo）· Ollama（qwen3.5:9b）·
 MemPalace/ChromaDB · SQLite · Windows 11、RTX 5070 Ti 16 GB
 
 ---

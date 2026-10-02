@@ -43,6 +43,18 @@ dashboard (GPU arbitration, pipeline health — six panels).
 | `hermas_vram_eviction_total{direction}` | counter | arbitration activity in both directions (ADR-0001) |
 | `hermas_command_errors_total{command}` | counter | user-visible failure rate per feature |
 
+## Isolated Qwen image evaluation (2026-09-22)
+
+`!Qwen生圖` and `!Qwen改圖` use a separate Qwen-Image-2.1 ComfyUI runtime
+on loopback port 8190. Under the existing GPU lock, the adapter checks the old
+ComfyUI queue, unloads the idle ComfyUI models and every loaded Ollama model, starts the
+isolated runtime, and on the normal path terminates its owned process tree before releasing
+the lock (if termination itself fails or times out, the lock is still released). Uploaded
+references are temporary. Bot credentials are not forwarded to the child.
+Existing Z-Image/Wan commands, model files and runtime remain unchanged.
+Cold-start overhead is intentional; external GPU clients still require coordination.
+This model is evaluated under its non-commercial research license.
+
 ## Known Limitations
 
 Stated plainly, because the scale assumptions are part of the architecture:
